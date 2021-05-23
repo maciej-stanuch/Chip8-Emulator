@@ -4,8 +4,13 @@ import errors.ErrorCollection;
 
 import javax.swing.*;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class Chip8 {
     public static final int PROGRAM_START_IN_MEMORY = 512;
@@ -13,14 +18,31 @@ public class Chip8 {
     public static final int DISPLAY_WIDTH = 64;
     public static final int DISPLAY_HEIGHT = 32;
 
+    // memory
     public byte[] memory = new byte[MEMORY_SIZE];
-    public byte[] v = new byte[16];
 
-    // char is 16-bit wide and unsigned
+    // registers
+    public byte[] v = new byte[16];
     public char i = 0;
     public char pc = 0;
 
+    // stack
+    public byte sp = 0;
+    public char[] stack = new char[16];
+
+    // timers
+    public byte delayTimer = 0;
+    public byte soundTimer = 0;
+
+    // peripherals
     public Display display = new Display(DISPLAY_WIDTH, DISPLAY_HEIGHT);
+
+    // opcode handler
+    private final OpcodeHandler opcodeHandler = new OpcodeHandler(this);
+
+    public Chip8() {
+        loadDefaultFontSpritesToMemory();
+    }
 
     public ErrorCollection loadProgramToMemory(String filename) {
         try {
@@ -45,5 +67,25 @@ public class Chip8 {
         frame.setVisible(true);
         frame.setResizable(false);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+    }
+
+    private void loadDefaultFontSpritesToMemory() {
+        List<byte[]> sprites = Arrays.stream(DefaultCharSprites.class.getDeclaredFields())
+                .filter(field -> field.getType() == byte[].class)
+                .sorted(Comparator.comparing(Field::getName))
+                .map(field -> {
+                    try {
+                        return (byte[]) field.get(byte[].class);
+                    } catch (IllegalAccessException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .collect(Collectors.toList());
+
+        int memoryIndex = 0;
+        for (byte[] sprite : sprites) {
+            System.arraycopy(sprite, 0, memory, memoryIndex, DefaultCharSprites.DEFAULT_SPRITE_SIZE);
+            memoryIndex += 5;
+        }
     }
 }
