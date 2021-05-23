@@ -7,7 +7,7 @@ import static java.lang.System.exit;
 import static vm.DefaultCharSprites.*;
 
 public class Chip8VM {
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
         if (args.length != 1) {
             System.out.println("Usage: chip8 <filename>");
             exit(1);
@@ -24,6 +24,7 @@ public class Chip8VM {
         }
 
         vm.initDisplay();
+        vm.mainLoop();
 
         //vm.display.clearScreen();
         System.out.println(vm.display.drawSprite(Arrays.copyOfRange(vm.memory, 0x0 * DEFAULT_SPRITE_SIZE, 0x1 * DEFAULT_SPRITE_SIZE), 0, 0));

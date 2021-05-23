@@ -18,17 +18,19 @@ public class Chip8 {
     public static final int DISPLAY_WIDTH = 64;
     public static final int DISPLAY_HEIGHT = 32;
 
+    public static boolean finish = false;
+
     // memory
     public byte[] memory = new byte[MEMORY_SIZE];
 
     // registers
     public byte[] v = new byte[16];
     public char i = 0;
-    public char pc = 0;
+    public char pc = 0x200;
 
     // stack
-    public byte sp = 0;
-    public char[] stack = new char[16];
+    public byte sp = -1;
+    public char[] stack = new char[160];
 
     // timers
     public byte delayTimer = 0;
@@ -42,6 +44,22 @@ public class Chip8 {
 
     public Chip8() {
         loadDefaultFontSpritesToMemory();
+    }
+
+    public void mainLoop() {
+        while (!finish) {
+
+            if (pc + 1 >= MEMORY_SIZE) {
+                throw new ArrayIndexOutOfBoundsException("Program counter tried to access data outside the memory. [pc = " + pc);
+            }
+
+            // Big endian opcode load
+            char opcode = (char) (memory[pc] << 8);
+            opcode = (char) (opcode | (memory[pc + 1] & 0xff));
+            pc += 2;
+
+            opcodeHandler.handleOpcode((char) opcode);
+        }
     }
 
     public ErrorCollection loadProgramToMemory(String filename) {
