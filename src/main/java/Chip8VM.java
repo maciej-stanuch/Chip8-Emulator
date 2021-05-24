@@ -5,7 +5,7 @@ import vm.Chip8;
 import static java.lang.System.exit;
 
 public class Chip8VM {
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
         if (args.length != 1) {
             System.out.println("Usage: chip8 <filename>");
             exit(1);

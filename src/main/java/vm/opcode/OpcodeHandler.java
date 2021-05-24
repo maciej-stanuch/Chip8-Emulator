@@ -57,12 +57,9 @@ public class OpcodeHandler {
     }
 
     public void handleOpcode(char opcode) {
-        //System.out.printf("Called opcode 0x%04X%n", (int) opcode);
-        //System.out.println("PC = " + (int) vm.pc);
         for (OpcodeEntry opcodeEntry : opcodeHandlers) {
             if ((char) (opcode & opcodeEntry.getMask()) == opcodeEntry.getOpcode()) {
                 opcodeEntry.getHandler().accept(opcode);
-                //System.out.printf("Success opcode 0x%04X with mask 0x%04X%n", (int) opcode, (int) opcodeEntry.getMask());
                 break;
             }
         }
