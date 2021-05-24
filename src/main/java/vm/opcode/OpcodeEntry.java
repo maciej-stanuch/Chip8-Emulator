@@ -1,4 +1,4 @@
-package vm;
+package vm.opcode;
 
 import java.util.Objects;
 import java.util.StringJoiner;

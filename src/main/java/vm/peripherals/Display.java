@@ -1,4 +1,4 @@
-package vm;
+package vm.peripherals;
 
 import javax.swing.*;
 import java.awt.*;
@@ -31,7 +31,7 @@ public class Display extends JPanel {
 
     /**
      * XORs the pixel at x,y coordinates and returns whether the pixel was flipped or not.
-     *
+     * <p>
      * Explanation:
      * Sprite pixels are XOR'd with corresponding screen pixels.
      * In other words, sprite pixels that are set flip the color of the corresponding screen pixel,
@@ -44,18 +44,23 @@ public class Display extends JPanel {
      * @return whether the pixel was flipped from set to unset.
      */
     public boolean putPixelXOR(int x, int y, Color c) {
-        int realX = (x * PIXEL_SIZE) % getWidth();
-        int realY = (y * PIXEL_SIZE) % getHeight();
+        int realX = Math.abs((x * PIXEL_SIZE)) % getWidth();
+        int realY = Math.abs((y * PIXEL_SIZE)) % getHeight();
 
         boolean pixelFlipped = false;
 
         for (int i = realX; i < realX + PIXEL_SIZE; i++) {
             for (int j = realY; j < realY + PIXEL_SIZE; j++) {
-                if (canvas.getRGB(i, j) == Color.BLACK.getRGB()) {
-                    canvas.setRGB(i, j, c.getRGB());
-                } else {
-                    canvas.setRGB(i, j, Color.BLACK.getRGB());
-                    pixelFlipped = true;
+                try {
+                    if (canvas.getRGB(i, j) == Color.BLACK.getRGB()) {
+                        canvas.setRGB(i, j, c.getRGB());
+                    } else {
+                        canvas.setRGB(i, j, Color.BLACK.getRGB());
+                        pixelFlipped = true;
+                    }
+                } catch (Exception e) {
+                    System.out.println(i);
+                    System.out.println(j);
                 }
             }
         }

@@ -1,6 +1,10 @@
 package vm;
 
 import errors.ErrorCollection;
+import vm.opcode.OpcodeHandler;
+import vm.peripherals.Display;
+import vm.peripherals.Keypad;
+import vm.peripherals.Speaker;
 
 import javax.swing.*;
 import java.io.IOException;
@@ -10,34 +14,41 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class Chip8 {
     public static final int PROGRAM_START_IN_MEMORY = 512;
     public static final int MEMORY_SIZE = 4096;
+    public static final int STACK_SIZE = 12;
     public static final int DISPLAY_WIDTH = 64;
     public static final int DISPLAY_HEIGHT = 32;
+    public static final int DEFAULT_CLOCK = 500;
 
     public static boolean finish = false;
 
     // memory
-    public byte[] memory = new byte[MEMORY_SIZE];
+    public final byte[] memory = new byte[MEMORY_SIZE];
 
     // registers
-    public byte[] v = new byte[16];
+    public final byte[] v = new byte[16];
     public char i = 0;
     public char pc = 0x200;
 
     // stack
     public byte sp = -1;
-    public char[] stack = new char[160];
+    public final char[] stack = new char[STACK_SIZE];
 
     // timers
-    public byte delayTimer = 0;
-    public byte soundTimer = 0;
+    public long delayTimer = 0;
+    public AtomicLong soundTimer = new AtomicLong(0);
 
     // peripherals
-    public Display display = new Display(DISPLAY_WIDTH, DISPLAY_HEIGHT);
+    public final Display display = new Display(DISPLAY_WIDTH, DISPLAY_HEIGHT);
+    public final Keypad keypad = new Keypad();
+    public final Speaker speaker = new Speaker(this);
 
     // opcode handler
     private final OpcodeHandler opcodeHandler = new OpcodeHandler(this);
@@ -46,8 +57,15 @@ public class Chip8 {
         loadDefaultFontSpritesToMemory();
     }
 
-    public void mainLoop() {
-        while (!finish) {
+    public void mainLoop(double clock) {
+        runWithClock(clock, iteration -> {
+            if (delayTimer > 0 && iteration % (((int) clock / 60) + 1) == 0) {
+                delayTimer--;
+            }
+
+            if (soundTimer.get() > 0 && iteration % (((int) clock / 60) + 1) == 0) {
+                soundTimer.getAndDecrement();
+            }
 
             if (pc + 1 >= MEMORY_SIZE) {
                 throw new ArrayIndexOutOfBoundsException("Program counter tried to access data outside the memory. [pc = " + pc);
@@ -58,8 +76,8 @@ public class Chip8 {
             opcode = (char) (opcode | (memory[pc + 1] & 0xff));
             pc += 2;
 
-            opcodeHandler.handleOpcode((char) opcode);
-        }
+            opcodeHandler.handleOpcode(opcode);
+        }, () -> finish);
     }
 
     public ErrorCollection loadProgramToMemory(String filename) {
@@ -85,6 +103,7 @@ public class Chip8 {
         frame.setVisible(true);
         frame.setResizable(false);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        frame.addKeyListener(keypad);
     }
 
     private void loadDefaultFontSpritesToMemory() {
@@ -104,6 +123,23 @@ public class Chip8 {
         for (byte[] sprite : sprites) {
             System.arraycopy(sprite, 0, memory, memoryIndex, DefaultCharSprites.DEFAULT_SPRITE_SIZE);
             memoryIndex += 5;
+        }
+    }
+
+    private void runWithClock(double clock, Consumer<Long> codeToRun, Supplier<Boolean> finishProvider) {
+        long lastTime = System.nanoTime();
+        final double ns = 1_000_000_000.0 / clock;
+        double delta = 0;
+        long iteration = 0;
+        while (!finishProvider.get()) {
+            long now = System.nanoTime();
+            delta += (now - lastTime) / ns;
+            lastTime = now;
+            while (delta >= 1) {
+                codeToRun.accept(iteration);
+                delta--;
+                iteration++;
+            }
         }
     }
 }
